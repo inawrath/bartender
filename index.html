@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14161a">
+<title>Bartender</title>
+<style>
+  :root {
+    --bg: #14161a; --card: #1e2127; --text: #f2f2f2; --muted: #a0a6b0;
+    --accent: #f5b942; --ok: #5ccf8a; --line: #2c3038;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 18px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 0 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  header {
+    position: sticky; top: 0; z-index: 1; background: var(--bg);
+    padding: calc(12px + env(safe-area-inset-top)) 0 12px;
+  }
+  h1 { margin: 0 0 10px; font-size: 1.5rem; }
+  input[type=search] {
+    width: 100%; padding: 14px 16px; font-size: 1rem; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text);
+  }
+  main { max-width: 640px; margin: 0 auto; }
+  details {
+    background: var(--card); border-radius: 14px; margin: 0 0 12px;
+    border: 1px solid var(--line);
+  }
+  summary {
+    list-style: none; cursor: pointer; padding: 18px 16px;
+    display: flex; align-items: center; gap: 12px; min-height: 64px;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary .emoji { font-size: 1.8rem; }
+  summary .name { font-weight: 600; flex: 1; }
+  summary::after { content: "›"; font-size: 1.6rem; color: var(--muted); transition: transform .2s; }
+  details[open] summary::after { transform: rotate(90deg); }
+  .tag { font-size: .7rem; padding: 3px 8px; border-radius: 99px; background: var(--ok); color: #0b2415; font-weight: 700; }
+  .body { padding: 0 16px 16px; border-top: 1px solid var(--line); }
+  .meta { color: var(--muted); font-size: .9rem; margin: 12px 0 4px; }
+  h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin: 16px 0 6px; }
+  ul.ing { list-style: none; padding: 0; margin: 0; }
+  ul.ing label {
+    display: flex; gap: 12px; align-items: center; padding: 10px 0;
+    border-bottom: 1px solid var(--line); min-height: 48px;
+  }
+  ul.ing input { width: 24px; height: 24px; accent-color: var(--ok); flex: none; }
+  ul.ing input:checked + span { text-decoration: line-through; color: var(--muted); }
+  .qty { font-weight: 700; color: var(--accent); min-width: 4.5em; display: inline-block; }
+  ol { padding-left: 1.3em; margin: 0; }
+  ol li { margin: 6px 0; }
+  #empty { color: var(--muted); text-align: center; display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🍸 Bartender</h1>
+    <input id="q" type="search" placeholder="Buscar trago o ingrediente…" aria-label="Buscar trago o ingrediente" autocomplete="off">
+  </header>
+  <div id="list"></div>
+  <p id="empty">No hay tragos que coincidan.</p>
+</main>
+
+<script>
+// Para agregar un trago: copia un objeto de esta lista y edítalo.
+const TRAGOS = [
+  {
+    nombre: "Margarita", emoji: "🍹", vaso: "Copa margarita o vaso corto", metodo: "Coctelera",
+    ingredientes: [
+      ["50 ml", "Tequila blanco"],
+      ["25 ml", "Triple sec (Cointreau)"],
+      ["25 ml", "Jugo de limón fresco"],
+      ["", "Sal para escarchar"],
+      ["", "Hielo"],
+      ["1", "Rodaja de limón (decoración)"],
+    ],
+    pasos: [
+      "Pasa limón por el borde del vaso y escárchalo con sal.",
+      "Pon tequila, triple sec y jugo de limón en la coctelera con hielo.",
+      "Agita fuerte 10–15 segundos.",
+      "Cuela en el vaso y decora con la rodaja de limón.",
+    ],
+  },
+  {
+    nombre: "Margarita Blue", emoji: "💙", vaso: "Copa margarita o vaso corto", metodo: "Coctelera",
+    ingredientes: [
+      ["50 ml", "Tequila blanco"],
+      ["25 ml", "Curaçao azul"],
+      ["25 ml", "Jugo de limón fresco"],
+      ["10 ml", "Jarabe de goma (opcional)"],
+      ["", "Sal o azúcar para escarchar"],
+      ["", "Hielo"],
+      ["1", "Rodaja de limón (decoración)"],
+    ],
+    pasos: [
+      "Escarcha el borde del vaso con sal o azúcar.",
+      "Pon tequila, curaçao azul, jugo de limón y jarabe en la coctelera con hielo.",
+      "Agita fuerte 10–15 segundos.",
+      "Cuela en el vaso y decora con limón.",
+    ],
+  },
+  {
+    nombre: "Mojito", emoji: "🌿", vaso: "Vaso alto (highball)", metodo: "Directo en el vaso",
+    ingredientes: [
+      ["50 ml", "Ron blanco"],
+      ["25 ml", "Jugo de limón fresco"],
+      ["2 cdtas", "Azúcar (o 20 ml jarabe)"],
+      ["8–10", "Hojas de menta"],
+      ["Al gusto", "Soda / agua con gas"],
+      ["", "Hielo picado"],
+    ],
+    pasos: [
+      "Pon la menta, el azúcar y el jugo de limón en el vaso.",
+      "Machaca suave (solo para soltar el aroma, sin romper la menta).",
+      "Agrega el ron y llena con hielo picado.",
+      "Completa con soda, revuelve de abajo hacia arriba y decora con menta.",
+    ],
+  },
+  {
+    nombre: "Mojito sin alcohol", emoji: "🍃", sinAlcohol: true, vaso: "Vaso alto (highball)", metodo: "Directo en el vaso",
+    ingredientes: [
+      ["30 ml", "Jugo de limón fresco"],
+      ["2 cdtas", "Azúcar (o 20 ml jarabe)"],
+      ["8–10", "Hojas de menta"],
+      ["150 ml", "Soda / agua con gas (o Sprite)"],
+      ["", "Hielo picado"],
+    ],
+    pasos: [
+      "Pon la menta, el azúcar y el jugo de limón en el vaso.",
+      "Machaca suave para soltar el aroma.",
+      "Llena con hielo picado.",
+      "Completa con soda, revuelve y decora con menta.",
+    ],
+  },
+];
+
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+const list = document.getElementById("list");
+list.innerHTML = TRAGOS.map(t => `
+  <details data-search="${esc(norm(t.nombre + " " + t.ingredientes.map(i => i[1]).join(" ")))}">
+    <summary>
+      <span class="emoji" aria-hidden="true">${t.emoji}</span>
+      <span class="name">${esc(t.nombre)}</span>
+      ${t.sinAlcohol ? '<span class="tag">SIN ALCOHOL</span>' : ""}
+    </summary>
+    <div class="body">
+      <p class="meta">🥃 ${esc(t.vaso)} · ${esc(t.metodo)}</p>
+      <h2>Ingredientes</h2>
+      <ul class="ing">
+        ${t.ingredientes.map(([q, n]) => `<li><label><input type="checkbox"><span><span class="qty">${esc(q)}</span> ${esc(n)}</span></label></li>`).join("")}
+      </ul>
+      <h2>Preparación</h2>
+      <ol>${t.pasos.map(p => `<li>${esc(p)}</li>`).join("")}</ol>
+    </div>
+  </details>`).join("");
+
+// Al abrir un trago se cierran los demás, para no perderse en la pantalla.
+list.addEventListener("toggle", e => {
+  if (e.target.open) list.querySelectorAll("details[open]").forEach(d => d !== e.target && (d.open = false));
+}, true);
+
+document.getElementById("q").addEventListener("input", e => {
+  const q = norm(e.target.value.trim());
+  let visibles = 0;
+  list.querySelectorAll("details").forEach(d => {
+    const ok = d.dataset.search.includes(q);
+    d.hidden = !ok;
+    visibles += ok;
+  });
+  document.getElementById("empty").style.display = visibles ? "none" : "block";
+});
+</script>
+</body>
+</html>
